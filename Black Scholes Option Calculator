@@ -1,0 +1,34 @@
+import numpy as np
+import scipy.stats as si
+import time
+
+
+def calcImpliedVol(S, K, T, P, r, sigma, type):
+    # S: spot price
+    # K: strike price
+    # T: time to maturity
+    # C: Call value
+    # r: interest rate
+    # sigma: volatility of underlying asset
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    vega = (1 / np.sqrt(2 * np.pi)) * S * np.sqrt(T) * np.exp(-(si.norm.cdf(d1, 0.0, 1.0) ** 2) * 0.5)
+    if type == "call":
+        fx = S * si.norm.cdf(d1, 0.0, 1.0) - K * np.exp(-r * T) * si.norm.cdf(d2, 0.0, 1.0) - P
+    elif type == "put":
+        fx = K * np.exp(-r * T) * si.norm.cdf(-d2, 0.0, 1.0) - S * si.norm.cdf(-d1, 0.0, 1.0) - P
+    return fx / vega
+
+
+def newton_vol_vanilla_option(S, K, T, P, r, sigma=0.25, tolerance=0.0001,type="call"):
+    xnew = sigma
+    xold = sigma - 1
+    while abs(xnew - xold) > tolerance:
+        xold = xnew
+        xnew = xold - calcImpliedVol(S,K,T,P,r,xold,type=type)
+    return xnew * 100
+
+
+start_time = time.time()
+print(newton_vol_vanilla_option(25, 20, 1, 0.025, 0.05, type="put"))
+print("--- %s seconds ---" % (time.time() - start_time))
